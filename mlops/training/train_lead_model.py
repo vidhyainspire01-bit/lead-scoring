@@ -1,11 +1,15 @@
+import os
+os.environ["FEATURE_STORE_NO_SNAPSHOT"] = "true"
+
 import mlflow
-from databricks import feature_store
 from databricks.feature_store import FeatureStoreClient
 from pyspark.sql import SparkSession
+
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score, accuracy_score
 import pandas as pd
+
 
 def run_training():
     spark = SparkSession.builder.getOrCreate()
@@ -14,10 +18,13 @@ def run_training():
     print("🟦 Loading Feature Store Table...")
     df = fs.read_table("dbw_rakez_ml.rakez_mlops.fs_lead_features")
 
-    # Convert Spark → Pandas for sklearn model
     pdf = df.toPandas()
 
     print("🟦 Preparing Training Data...")
+
+    # Drop timestamp – sklearn can't use it
+    pdf = pdf.drop(columns=["feature_timestamp"], errors="ignore")
+
     X = pdf.drop(["lead_id", "lead_segment"], axis=1)
     y = pdf["lead_segment"]
 
@@ -27,6 +34,8 @@ def run_training():
 
     print("🟦 Starting MLflow Run...")
     mlflow.set_experiment("/Shared/lead_scoring_experiments")
+
+    from mlflow.models.signature import infer_signature
 
     with mlflow.start_run():
 
@@ -48,15 +57,22 @@ def run_training():
 
         mlflow.log_metric("accuracy", acc)
         mlflow.log_metric("auc", auc)
-        mlflow.sklearn.log_model(model, "model")
+
+        # 🔥 Add model signature here
+        signature = infer_signature(X_train, model.predict(X_train))
+
+        # 🔥 Log model WITH signature
+        mlflow.sklearn.log_model(
+            model,
+            "model",
+            signature=signature
+        )
 
         print("🟦 Register Model to Unity Catalog...")
         mlflow.register_model(
-            "runs:/{}/model".format(mlflow.active_run().info.run_id),
-            "dbw_rakez_ml.lead_scoring_model"
+            f"runs:/{mlflow.active_run().info.run_id}/model",
+            "dbw_rakez_ml.rakez_mlops.lead_scoring_model"
         )
-
-    print("Training Completed Successfully ✔")
 
 if __name__ == "__main__":
     run_training()
