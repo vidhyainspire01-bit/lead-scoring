@@ -1,0 +1,13 @@
+{
+  "name": "Lead Scoring - Training Job",
+  "tasks": [
+    {
+      "task_key": "train_model",
+      "description": "Train Lead Scoring Model",
+      "notebook_task": {
+        "notebook_path": "Repos/lead-scoring/notebooks/01_dev_training/dev_lead_scoring_train"
+      },
+      "existing_cluster_id": "YOUR-CLUSTER-ID"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+name: Train Model (CD)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy-train:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Trigger Databricks Training Job
+        uses: databricks/run-job@v1
+        with:
+          host: ${{ secrets.DATABRICKS_HOST }}
+          token: ${{ secrets.DATABRICKS_TOKEN }}
+          job_id: ${{ secrets.DATABRICKS_TRAIN_JOB_ID }}
