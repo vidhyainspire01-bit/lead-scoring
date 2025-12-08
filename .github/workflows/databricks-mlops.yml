@@ -1,0 +1,119 @@
+name: Databricks MLOps
+
+on:
+  pull_request:
+    branches: [ staging ]
+  push:
+    branches: [ staging, main ]
+
+env:
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+jobs:
+  # -----------------------------
+  # 1. CI Validation (Dev → Staging PR)
+  # -----------------------------
+  ci-validation:
+    name: CI Validation (Lint + Tests)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest flake8 black
+
+      - name: Lint
+        run: flake8 .
+
+      - name: Code Format
+        run: black --check .
+
+      - name: Run Tests
+        run: pytest -q
+
+  # -----------------------------
+  # 2. Staging – Run Training
+  # -----------------------------
+  training-job:
+    name: Trigger Training Notebook - Staging
+    needs: ci-validation
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+
+    steps:
+      - name: Run Training Notebook
+        uses: databricks/run-notebook@v0
+        with:
+          databricks-host: ${{ secrets.DATABRICKS_HOST }}
+          databricks-token: ${{ secrets.DATABRICKS_TOKEN }}
+          notebook-path: "/Users/admin@thiruadmin82gmailcom.onmicrosoft.com/lead-scoring/mlops/training/train_lead_model"
+          existing-cluster-id: ${{ secrets.CLUSTER_ID_STAGING }}
+
+  # -----------------------------
+  # 3. Staging – Validate Model
+  # -----------------------------
+  model-validation:
+    name: Validate Model Before Promotion
+    needs: training-job
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+
+    steps:
+      - name: Run Validation Notebook
+        uses: databricks/run-notebook@v0
+        with:
+          databricks-host: ${{ secrets.DATABRICKS_HOST }}
+          databricks-token: ${{ secrets.DATABRICKS_TOKEN }}
+          notebook-path: "/Users/admin@thiruadmin82gmailcom.onmicrosoft.com/lead-scoring/mlops/validation/validate_model"
+          existing-cluster-id: ${{ secrets.CLUSTER_ID_STAGING }}
+
+  # -----------------------------
+  # 4. Production – Promote UC Model
+  # -----------------------------
+  promote-model:
+    name: Promote to Production UC Registry
+    runs-on: ubuntu-latest
+    needs: model-validation
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Promote Model in UC
+        uses: databricks/run-notebook@v0
+        with:
+          databricks-host: ${{ secrets.DATABRICKS_HOST }}
+          databricks-token: ${{ secrets.DATABRICKS_TOKEN }}
+          notebook-path: "/Users/admin@thiruadmin82gmailcom.onmicrosoft.com/lead-scoring/mlops/cicd/promote_model"
+          existing-cluster-id: ${{ secrets.CLUSTER_ID_PROD }}
+
+  # -----------------------------
+  # 5. Production – Refresh Online Serving
+  # -----------------------------
+  refresh-serving:
+    name: Refresh Production Serving
+    needs: promote-model
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Refresh Serving Endpoint
+        run: |
+          curl -X POST \
+            "${{ secrets.DATABRICKS_HOST }}/api/2.0/serving-endpoints/${{ secrets.SERVING_ENDPOINT }}/update-config" \
+            -H "Authorization: Bearer ${{ secrets.DATABRICKS_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+                  "served_models": [{
+                    "model_name": "'${{ secrets.UC_CATALOG }}'.'${{ secrets.UC_SCHEMA }}'.lead_scoring_model",
+                    "model_version": "LATEST"
+                  }]
+                }'
