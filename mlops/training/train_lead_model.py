@@ -35,6 +35,8 @@ def run_training():
     print("🟦 Starting MLflow Run...")
     mlflow.set_experiment("/Shared/lead_scoring_experiments")
 
+    from mlflow.models.signature import infer_signature
+
     with mlflow.start_run():
 
         model = RandomForestClassifier(
