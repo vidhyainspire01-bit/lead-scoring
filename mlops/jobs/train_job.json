@@ -5,9 +5,16 @@
       "task_key": "train_model",
       "description": "Train Lead Scoring Model",
       "notebook_task": {
-        "notebook_path": "Repos/lead-scoring/notebooks/01_dev_training/dev_lead_scoring_train"
+        "notebook_path": "/Repos/vidhyainspire01-bit/lead-scoring/notebooks/01_dev_training/dev_lead_scoring_train",
+        "base_parameters": {
+          "env": "staging"
+        }
       },
-      "existing_cluster_id": "YOUR-CLUSTER-ID"
+      "existing_cluster_id": "{{secrets/CLUSTER_ID_SHARED}}"
     }
-  ]
+  ],
+  "email_notifications": {
+    "on_failure": ["vidhya.inspire01@gmail.com"]
+  },
+  "max_concurrent_runs": 1
 }
