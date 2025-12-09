@@ -14,7 +14,7 @@ env:
 jobs:
 
   # =========================================================
-  # 1. CI VALIDATION (Only runs during PR → staging)
+  # 1. CI VALIDATION (Only during PR → staging)
   # =========================================================
   ci-validation:
     name: CI Validation (Lint + Tests)
@@ -41,12 +41,12 @@ jobs:
       - name: Run Tests
         run: pytest -q
 
+
   # =========================================================
-  # 2. TRAINING (Runs ONLY when staging branch receives a push)
+  # 2. TRAINING (Runs on staging push)
   # =========================================================
   training-job:
     name: Trigger Training Notebook - Staging
-    needs: ci-validation
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
 
@@ -59,13 +59,14 @@ jobs:
           notebook-path: "/Users/admin@thiruadmin82gmailcom.onmicrosoft.com/lead-scoring/mlops/training/train_lead_model"
           existing-cluster-id: ${{ secrets.CLUSTER_ID_STAGING }}
 
+
   # =========================================================
-  # 3. MODEL VALIDATION (Runs after training on staging)
+  # 3. MODEL VALIDATION (Runs ONLY after training on staging)
   # =========================================================
   model-validation:
     name: Validate Model Before Promotion
-    needs: training-job
     runs-on: ubuntu-latest
+    needs: [training-job]
     if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
 
     steps:
@@ -77,13 +78,14 @@ jobs:
           notebook-path: "/Users/admin@thiruadmin82gmailcom.onmicrosoft.com/lead-scoring/mlops/validation/validate_model"
           existing-cluster-id: ${{ secrets.CLUSTER_ID_STAGING }}
 
+
   # =========================================================
-  # 4. PRODUCTION PROMOTION (Runs only when main receives a push)
+  # 4. PRODUCTION PROMOTION (Run on main push only)
   # =========================================================
   promote-model:
     name: Promote to Production UC Registry
-    needs: model-validation
     runs-on: ubuntu-latest
+    needs: [model-validation]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
@@ -95,13 +97,14 @@ jobs:
           notebook-path: "/Users/admin@thiruadmin82gmailcom.onmicrosoft.com/lead-scoring/mlops/cicd/promote_model"
           existing-cluster-id: ${{ secrets.CLUSTER_ID_PROD }}
 
+
   # =========================================================
   # 5. REFRESH ONLINE SERVING ENDPOINT (MAIN only)
   # =========================================================
   refresh-serving:
-    name: Refresh Production Serving Endpoint
-    needs: promote-model
+    name: Refresh Production Serving
     runs-on: ubuntu-latest
+    needs: [promote-model]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
