@@ -12,8 +12,9 @@ env:
   DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
 jobs:
+
   # =========================================================
-  # 1. CI VALIDATION (Only during PR to staging)
+  # 1. CI VALIDATION (Only runs during PR → staging)
   # =========================================================
   ci-validation:
     name: CI Validation (Lint + Tests)
@@ -22,21 +23,26 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+
       - name: Install dependencies
         run: pip install -r requirements.txt pytest flake8 black
+
       - name: Lint
         run: flake8 .
+
       - name: Code Format
         run: black --check .
+
       - name: Run Tests
         run: pytest -q
 
   # =========================================================
-  # 2. TRAINING (ONLY when code is pushed to staging)
+  # 2. TRAINING (Runs ONLY when staging branch receives a push)
   # =========================================================
   training-job:
     name: Trigger Training Notebook - Staging
@@ -54,7 +60,7 @@ jobs:
           existing-cluster-id: ${{ secrets.CLUSTER_ID_STAGING }}
 
   # =========================================================
-  # 3. MODEL VALIDATION (Staging → Push event only)
+  # 3. MODEL VALIDATION (Runs after training on staging)
   # =========================================================
   model-validation:
     name: Validate Model Before Promotion
@@ -72,12 +78,12 @@ jobs:
           existing-cluster-id: ${{ secrets.CLUSTER_ID_STAGING }}
 
   # =========================================================
-  # 4. PRODUCTION PROMOTION (main push only)
+  # 4. PRODUCTION PROMOTION (Runs only when main receives a push)
   # =========================================================
   promote-model:
     name: Promote to Production UC Registry
-    runs-on: ubuntu-latest
     needs: model-validation
+    runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
@@ -90,10 +96,10 @@ jobs:
           existing-cluster-id: ${{ secrets.CLUSTER_ID_PROD }}
 
   # =========================================================
-  # 5. REFRESH SERVING (main push only)
+  # 5. REFRESH ONLINE SERVING ENDPOINT (MAIN only)
   # =========================================================
   refresh-serving:
-    name: Refresh Production Serving
+    name: Refresh Production Serving Endpoint
     needs: promote-model
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
