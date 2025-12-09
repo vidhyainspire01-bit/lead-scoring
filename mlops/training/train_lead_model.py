@@ -49,8 +49,11 @@ def run_training():
         model.fit(X_train, y_train)
 
         preds = model.predict(X_test)
-        auc = roc_auc_score(pd.get_dummies(y_test), pd.get_dummies(preds))
         acc = accuracy_score(y_test, preds)
+
+        # AUC → Requires probability not class predictions
+        preds_proba = model.predict_proba(X_test)
+        auc = roc_auc_score(pd.get_dummies(y_test), preds_proba, multi_class="ovr")
 
         print(f"Model Accuracy: {acc}")
         print(f"AUC Score: {auc}")
@@ -58,21 +61,16 @@ def run_training():
         mlflow.log_metric("accuracy", acc)
         mlflow.log_metric("auc", auc)
 
-        # 🔥 Add model signature here
-        signature = infer_signature(X_train, model.predict(X_train))
-
-        # 🔥 Log model WITH signature
-        mlflow.sklearn.log_model(
-            model,
-            "model",
-            signature=signature
-        )
+        mlflow.sklearn.log_model(model, "model")
 
         print("🟦 Register Model to Unity Catalog...")
         mlflow.register_model(
             f"runs:/{mlflow.active_run().info.run_id}/model",
-            "dbw_rakez_ml.rakez_mlops.lead_scoring_model"
+            "dbw_rakez_ml.lead_scoring_model"
         )
+
+    print("Training Completed Successfully ✔")
+
 
 if __name__ == "__main__":
     run_training()
