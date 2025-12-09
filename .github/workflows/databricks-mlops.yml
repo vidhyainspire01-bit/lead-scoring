@@ -2,6 +2,7 @@ name: Databricks MLOps
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened]
     branches: [ staging ]
   push:
     branches: [ staging, main ]
@@ -11,46 +12,37 @@ env:
   DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
 jobs:
-  # ============================================================
-  # 1. CI VALIDATION (Only runs on PR → staging)
-  # ============================================================
+  # =========================================================
+  # 1. CI VALIDATION (Only during PR to staging)
+  # =========================================================
   ci-validation:
     name: CI Validation (Lint + Tests)
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    continue-on-error: true   # <----- IMPORTANT FIX
 
     steps:
       - uses: actions/checkout@v3
-
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install pytest flake8 black
-
+        run: pip install -r requirements.txt pytest flake8 black
       - name: Lint
         run: flake8 .
-
       - name: Code Format
         run: black --check .
-
       - name: Run Tests
         run: pytest -q
 
-
-  # ============================================================
-  # 2. STAGING — TRAINING JOB (Runs on push → staging)
-  # ============================================================
+  # =========================================================
+  # 2. TRAINING (ONLY when code is pushed to staging)
+  # =========================================================
   training-job:
     name: Trigger Training Notebook - Staging
+    needs: ci-validation
     runs-on: ubuntu-latest
-    needs: [ci-validation]
-    if: startsWith(github.ref, 'refs/heads/staging')
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
 
     steps:
       - name: Run Training Notebook
@@ -61,15 +53,14 @@ jobs:
           notebook-path: "/Users/admin@thiruadmin82gmailcom.onmicrosoft.com/lead-scoring/mlops/training/train_lead_model"
           existing-cluster-id: ${{ secrets.CLUSTER_ID_STAGING }}
 
-
-  # ============================================================
-  # 3. STAGING — MODEL VALIDATION
-  # ============================================================
+  # =========================================================
+  # 3. MODEL VALIDATION (Staging → Push event only)
+  # =========================================================
   model-validation:
     name: Validate Model Before Promotion
+    needs: training-job
     runs-on: ubuntu-latest
-    needs: [training-job]
-    if: startsWith(github.ref, 'refs/heads/staging')
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
 
     steps:
       - name: Run Validation Notebook
@@ -80,15 +71,14 @@ jobs:
           notebook-path: "/Users/admin@thiruadmin82gmailcom.onmicrosoft.com/lead-scoring/mlops/validation/validate_model"
           existing-cluster-id: ${{ secrets.CLUSTER_ID_STAGING }}
 
-
-  # ============================================================
-  # 4. PRODUCTION — PROMOTE MODEL (Runs on push → main)
-  # ============================================================
+  # =========================================================
+  # 4. PRODUCTION PROMOTION (main push only)
+  # =========================================================
   promote-model:
     name: Promote to Production UC Registry
     runs-on: ubuntu-latest
-    needs: [model-validation]
-    if: startsWith(github.ref, 'refs/heads/main')
+    needs: model-validation
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
       - name: Promote Model in UC
@@ -99,15 +89,14 @@ jobs:
           notebook-path: "/Users/admin@thiruadmin82gmailcom.onmicrosoft.com/lead-scoring/mlops/cicd/promote_model"
           existing-cluster-id: ${{ secrets.CLUSTER_ID_PROD }}
 
-
-  # ============================================================
-  # 5. PRODUCTION — REFRESH ONLINE SERVING
-  # ============================================================
+  # =========================================================
+  # 5. REFRESH SERVING (main push only)
+  # =========================================================
   refresh-serving:
-    name: Refresh Production Serving Endpoint
+    name: Refresh Production Serving
+    needs: promote-model
     runs-on: ubuntu-latest
-    needs: [promote-model]
-    if: startsWith(github.ref, 'refs/heads/main')
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
       - name: Refresh Serving Endpoint
