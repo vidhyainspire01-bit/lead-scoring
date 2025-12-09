@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RAKEZ Lead Scoring – Executive Monitoring</title>
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --card-bg: #ffffff;
+      --border: #d4d4d8;
+      --accent: #2563eb;
+      --accent-soft: #dbeafe;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --success: #15803d;
+      --danger: #b91c1c;
+      --warning: #b45309;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px 40px 40px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.6rem;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .meta {
+      text-align: right;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .meta strong {
+      color: var(--text-main);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 12px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 14px 16px 16px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pill {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      white-space: nowrap;
+    }
+
+    .kpi-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .kpi {
+      flex: 1;
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 8px 9px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .kpi-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 3px;
+    }
+
+    .kpi-value {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .kpi-value.success { color: var(--success); }
+    .kpi-value.danger { color: var(--danger); }
+    .kpi-value.warning { color: var(--warning); }
+
+    .kpi-note {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .mini-panel {
+      margin-top: 8px;
+      padding: 8px 9px;
+      border-radius: 8px;
+      border: 1px dashed #e5e7eb;
+      background: #f9fafb;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 6px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      margin-right: 4px;
+      background: var(--accent);
+    }
+
+    .legend span:nth-child(2)::before {
+      background: #f59e0b;
+    }
+
+    .legend span:nth-child(3)::before {
+      background: #9ca3af;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      margin-left: 8px;
+    }
+
+    .badge-positive {
+      background: #dcfce7;
+      color: var(--success);
+      border: 1px solid #22c55e;
+    }
+
+    .badge-neutral {
+      background: #e5e7eb;
+      color: var(--text-muted);
+      border: 1px solid #d4d4d8;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      border-top: 1px solid #e5e7eb;
+      padding-top: 10px;
+    }
+
+    img.logo {
+      max-height: 40px;
+    }
+
+    @media print {
+      body {
+        padding: 12px 20px;
+      }
+      .grid {
+        gap: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title-block">
+      <!-- Replace src with actual RAKEZ logo if available -->
+      <img src="C:\Users\Nishok\Pictures\Saved Pictures\Screenshot 2025-12-10 005314.png" alt="RAKEZ Logo" class="logo" />
+      <h1>RAKEZ Lead Scoring – Executive Monitoring Overview</h1>
+      <div class="subtitle">
+        One-page view of model performance, operational SLOs, business impact, and experimentation status.
+      </div>
+    </div>
+    <div class="meta">
+      <div><strong>Environment:</strong> Production</div>
+      <div><strong>Model:</strong> Lead Scoring v5 (MLflow – Production stage)</div>
+      <div>Last refresh: 10 Dec 2025 · Training window: Jan–Jun 2025</div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Model Health -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+           Model Health
+        </div>
+        <span class="pill">Quality</span>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi" title="Area Under ROC Curve – higher is better, measures ranking quality of the model.">
+          <div class="kpi-label">AUC (last 7 days)</div>
+          <div class="kpi-value success">0.842</div>
+          <div class="kpi-note">Target ≥ 0.80</div>
+        </div>
+        <div class="kpi" title="Precision@20 – quality of the top 20 leads we send to sales">
+          <div class="kpi-label">Precision@20</div>
+          <div class="kpi-value success">0.63</div>
+          <div class="kpi-note">Improved vs legacy (0.54)</div>
+        </div>
+      </div>
+
+      <div class="mini-panel">
+        <strong>Trend (illustrative)</strong><br/>
+        • AUC stable between 0.83–0.85 over the last 14 days<br/>
+        • No significant degradation after latest retrain<br/>
+        • Data drift within acceptable thresholds (no re-training trigger)
+      </div>
+    </div>
+
+    <!-- Operational Metrics -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          ⚙️ Operational Metrics
+        </div>
+        <span class="pill">SLOs</span>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi" title="Service Level Objective: 95% of requests should be served under 300 ms.">
+          <div class="kpi-label">P95 latency</div>
+          <div class="kpi-value warning">210 ms</div>
+          <div class="kpi-note">SLO: &lt; 300 ms</div>
+        </div>
+        <div class="kpi" title="Percentage of failed scoring calls (timeouts, HTTP 5xx, etc.)">
+          <div class="kpi-label">Error rate</div>
+          <div class="kpi-value success">0.23%</div>
+          <div class="kpi-note">SLO: &lt; 0.50%</div>
+        </div>
+        <div class="kpi" title="Average sustained traffic from CRM and channel integrations">
+          <div class="kpi-label">Requests / sec</div>
+          <div class="kpi-value">35</div>
+          <div class="kpi-note">Peak: ~120 req/s</div>
+        </div>
+      </div>
+
+      <div class="mini-panel">
+        <strong>Notes</strong><br/>
+        • Deployed via API Gateway → Databricks Model Serving<br/>
+        • Auto-scaling configured to handle campaign spikes<br/>
+        • Fallback: hourly batch scores table if online API is unavailable
+      </div>
+    </div>
+
+    <!-- Business Outcomes -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+           Business Outcomes
+        </div>
+        <span class="pill">Impact (Last 30 days)</span>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi" title="Conversion rate from lead to opportunity for Hot band">
+          <div class="kpi-label">Hot band conversion</div>
+          <div class="kpi-value success">18.4%</div>
+          <div class="kpi-note">3.1× vs Cold band</div>
+        </div>
+        <div class="kpi" title="Conversion rate from lead to opportunity for Warm band">
+          <div class="kpi-label">Warm band conversion</div>
+          <div class="kpi-value">7.1%</div>
+          <div class="kpi-note">Prioritized after Hot</div>
+        </div>
+        <div class="kpi" title="Conversion rate from lead to opportunity for Cold band">
+          <div class="kpi-label">Cold band conversion</div>
+          <div class="kpi-value danger">1.3%</div>
+          <div class="kpi-note">Low ROI – deprioritized</div>
+        </div>
+      </div>
+
+      <div class="mini-panel">
+        <strong>Score bands & expected behavior</strong><br/>
+        • Hot (top ~20% of leads) – primary focus for inside sales<br/>
+        • Warm (next ~40%) – follow-up as capacity allows<br/>
+        • Cold (remaining) – nurtured via marketing automation<br/>
+      </div>
+
+      <div class="legend">
+        <span>Hot – High probability / high value</span>
+        <span>Warm – Medium probability</span>
+        <span>Cold – Low probability</span>
+      </div>
+    </div>
+
+    <!-- Experiments -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+           Experiments (A/B Testing)
+        </div>
+        <span class="badge badge-positive">+8.5% uplift vs control</span>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi" title="Legacy heuristic scoring logic used as baseline">
+          <div class="kpi-label">Control (legacy)</div>
+          <div class="kpi-value">11.0%</div>
+          <div class="kpi-note">Lead → opportunity conversion</div>
+        </div>
+        <div class="kpi" title="New ML model (v5) scoring with calibrated probabilities">
+          <div class="kpi-label">Treatment (ML v5)</div>
+          <div class="kpi-value success">11.9%</div>
+          <div class="kpi-note">50% of inbound leads</div>
+        </div>
+      </div>
+
+      <div class="mini-panel">
+        <strong>Experiment 3 – Status</strong><br/>
+        • Design: 50% Control (legacy), 50% Treatment (ML model v5)<br/>
+        • Duration: Day 10 / 21<br/>
+        • Stop rule: auto-revert if Treatment &lt; Control for 3 consecutive days<br/>
+        • Interpretation: current uplift indicates additional pipeline and faster payback of ML investment
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    KEY INSIGHTS FOR LEADERSHIP: (1) Model quality is stable above agreed thresholds (AUC ≥ 0.80),
+    (2) Operational SLOs are being met with comfortable headroom, (3) Sales outcomes clearly correlate
+    with score bands (Hot vs Warm vs Cold), and (4) Live A/B testing shows a positive uplift from the new
+    ML-driven prioritisation versus legacy heuristics.
+  </div>
+</body>
+</html>
