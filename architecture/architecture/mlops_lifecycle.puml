@@ -1,0 +1,62 @@
+@startuml
+title RAKEZ Lead Scoring - MLOps Lifecycle (Dev → Staging → Prod)
+
+skinparam shadowing false
+skinparam backgroundColor #F7F9FC
+skinparam defaultTextAlignment center
+
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #4E8EF7
+  FontSize 12
+  RoundCorner 12
+}
+skinparam ArrowColor #00B5AD
+skinparam ArrowThickness 1.3
+skinparam ArrowFontSize 11
+
+|Dev Environment|
+start
+:Step 1 - EDA & Feature Engineering\n(Databricks Dev);
+:Step 2 - Prototype Training\n(Notebook / Pipeline);
+:Step 3 - Log runs in MLflow\n(Experiment: RAKEZ_Lead_Scoring_Dev);
+:Step 4 - Refine features & model;
+:Step 5 - Commit code to Git\n(branch: feature/lead_scoring_vX);
+-> CI_STAGE;
+
+|Staging Environment|
+label CI_STAGE
+:Step 6 - CI Pipeline\n(lint, unit tests, schema checks);
+:Step 7 - Build artifact\n(wheel / Docker image);
+:Step 8 - Trigger Databricks\nStaging training job;
+:Step 9 - Train on staging data;
+:Step 10 - Log runs in MLflow\n(experiment: RAKEZ_Lead_Scoring_Staging);
+:Step 11 - Register model\n(name: rakez_lead_scoring);
+:Step 12 - Set MLflow stage = STAGING;
+:Step 13 - Shadow / batch scoring\nand compare vs legacy rules;
+:Step 14 - Joint review\n(AUC, Precision@K, uplift);
+
+if (Step 15 - Meets promotion gates?) then (Yes)
+  -> Promote_to_Prod;
+else (No)
+  :Step 16 - Iterate model & features\n(back to Dev);
+  -> Dev Environment;
+endif
+
+|Production Environment|
+label Promote_to_Prod
+:Step 17 - Promote MLflow model\nStage = PRODUCTION;
+:Step 18 - Update serving endpoint\n(Databricks / FastAPI);
+:Step 19 - Schedule jobs\n(feature refresh, batch scoring,\nmonitoring & drift);
+:Step 20 - Update Streamlit & BI\nwith new version and KPIs;
+stop
+
+legend right
+  == Phases ==
+  Steps 1–5  : Inner-loop experimentation (Dev)
+  Steps 6–14 : CI and staging validation
+  Steps 15–16: Gate decision / re-iterate
+  Steps 17–20: Production rollout and observability
+endlegend
+
+@enduml

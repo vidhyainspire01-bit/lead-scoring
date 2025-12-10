@@ -1,0 +1,118 @@
+@startuml
+title RAKEZ Lead Scoring - High-Level Architecture
+
+skinparam shadowing false
+skinparam backgroundColor #F7F9FC
+skinparam defaultTextAlignment center
+
+skinparam componentStyle rectangle
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #4E8EF7
+  RoundCorner 10
+}
+skinparam node {
+  BackgroundColor #FFFFFF
+  BorderColor #00B5AD
+  RoundCorner 10
+}
+skinparam database {
+  BackgroundColor #FFFFFF
+  BorderColor #4E8EF7
+}
+skinparam cloud {
+  BackgroundColor #FFFFFF
+  BorderColor #4E8EF7
+}
+skinparam ArrowColor #00B5AD
+skinparam ArrowThickness 1.3
+skinparam ArrowFontSize 11
+
+' -------------------------------------------------
+' COMPONENTS
+' -------------------------------------------------
+
+rectangle "Step 1 - Lead Sources" as LS {
+  node "CRM\n(Salesforce / Dynamics)" as CRM
+  node "Web Forms\nLanding Pages" as WEB
+  node "Marketing Platforms\n(Google Ads, LinkedIn)" as MKT
+}
+
+node "Step 2 - FastAPI\nLead Engine" as API
+
+database "Step 3 - PostgreSQL\nleads table" as PG
+
+cloud "Step 4 - Databricks Lakehouse" as DBX {
+  database "raw_leads\n(Delta)" as RAW
+  database "lead_features_gold\n(Feature Store)" as FEAT
+  database "lead_scores_gold\n(Delta)" as SCORES
+  database "model_monitoring_metrics\n(Delta)" as METRICS
+}
+
+' Training jobs block
+node "Step 5 - Training Jobs\n(Dev / Staging / Prod)" as TRAIN
+
+component "Step 6 - MLflow\nTracking & Registry" as MLF
+
+node "Step 7 - Model Serving Endpoint\n(Databricks / FastAPI)" as SERVE
+
+node "Step 8 - Streamlit\nMonitoring Dashboard" as ST
+
+component "Step 9 - CRM / Sales UI\n(Lead Prioritisation)" as CRM_UI
+
+node "Leadership / Data Team" as LEADS
+
+' -------------------------------------------------
+' FLOWS (S1, S2, ... labels = sub-steps)
+' -------------------------------------------------
+
+' Ingestion
+CRM --> API : S1 Ingest leads
+WEB --> API : S1 Ingest leads
+MKT --> API : S1 Ingest leads
+
+' App DB and sync to lakehouse
+API --> PG  : S2 Store raw lead
+PG  --> RAW : S3 Nightly sync to\nraw_leads Delta
+
+' Features + training
+RAW  --> FEAT  : S4 Feature engineering
+FEAT --> TRAIN : S5 Read features for training
+TRAIN --> MLF  : S6 Log runs and\nregister model versions
+
+' Serving
+MLF   --> SERVE : S7 Load Production model
+SERVE --> API   : S8 Online scoring\n(REST / gRPC)
+API   --> PG    : S9 Update score,\nband, model_version, scored_at
+
+' Analytics & monitoring
+PG      --> ST      : S10 Load latest KPIs
+SCORES  --> ST      : S11 Score distribution\nand segments
+METRICS --> ST      : S12 Model health & drift
+
+' Sales consumption
+PG     --> CRM_UI : S13 Show prioritised\nHot / Warm / Cold leads
+ST     --> LEADS  : S14 Exec dashboards\nand insights
+
+' -------------------------------------------------
+' LEGEND
+' -------------------------------------------------
+legend right
+  == Step Key ==
+  Step 1 : Lead capture from CRM / Web / Marketing
+  Step 2 : API layer to validate and store leads
+  Step 3 : Operational store (PostgreSQL)
+  Step 4 : Lakehouse (raw, features, scores, metrics)
+  Step 5 : Databricks training jobs
+  Step 6 : MLflow tracking & registry
+  Step 7 : Online model serving
+  Step 8 : Streamlit monitoring dashboard
+  Step 9 : CRM / Sales UI using scored leads
+
+  S1–S3 : Data ingestion and sync
+  S4–S6 : Feature engineering and model training
+  S7–S9 : Serving and scoring back to DB
+  S10–S14 : Monitoring, analytics and business use
+endlegend
+
+@enduml

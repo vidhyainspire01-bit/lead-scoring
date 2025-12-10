@@ -1,0 +1,79 @@
+@startuml
+title RAKEZ Lead Scoring – ④ Databricks Data & Job Flow
+
+skinparam shadowing false
+skinparam backgroundColor #F7F9FC
+skinparam defaultTextAlignment center
+
+skinparam componentStyle rectangle
+skinparam node {
+  BackgroundColor #FFFFFF
+  BorderColor #4E8EF7
+  RoundCorner 10
+}
+skinparam database {
+  BackgroundColor #FFFFFF
+  BorderColor #00B5AD
+}
+skinparam cloud {
+  BackgroundColor #FFFFFF
+  BorderColor #4E8EF7
+}
+skinparam ArrowColor #00B5AD
+skinparam ArrowThickness 1.3
+skinparam ArrowFontSize 11
+
+database "① PostgreSQL\nleads" as PG
+
+cloud "Databricks Lakehouse" {
+  database "② raw_leads\n(Delta)" as RAW
+  database "③ lead_features_gold\n(Delta / Feature Store)" as FEAT
+  database "⑤ lead_scores_gold\n(Delta)" as SCORES
+  database "⑦ model_monitoring_metrics\n(Delta)" as METRICS
+}
+
+node "Job ① Ingest Leads\n(Postgres → raw_leads)" as ING
+node "Job ② Feature Engineering\n(raw_leads → FEAT)" as FE_JOB
+node "Job ③ Model Training\n(uses FEAT)" as TRAIN
+node "Job ④ Batch Scoring\n(FEAT → SCORES + Postgres)" as BATCH
+node "Job ⑤ Monitoring & Drift\n(SCORES → METRICS)" as MON
+
+component "MLflow\nTracking & Registry" as MLF
+node "Online Serving\nEndpoint" as SERVE
+node "Streamlit / BI\nDashboards" as DASH
+
+' Flows
+PG --> ING : ① Extract new leads
+ING --> RAW : Write to Delta
+
+RAW --> FE_JOB : ② Transform & join
+FE_JOB --> FEAT : Publish features
+
+FEAT --> TRAIN : ③ Train model
+TRAIN --> MLF : Log + register\nmodel versions
+
+MLF --> SERVE : Deploy\nProduction model
+
+FEAT --> BATCH : ④ Load features
+SERVE --> BATCH : (optional)\nuse same model
+BATCH --> SCORES : Write batch scores\nwith model_version
+BATCH --> PG : Update score,\nband, scored_at
+
+SCORES --> MON : ⑤ Compute\nmonitoring metrics
+MON --> METRICS : Persist stats
+
+METRICS --> DASH : ⑥ Model health,\ndrift dashboards
+SCORES --> DASH : Score\nhistograms / bands
+PG --> DASH : Latest scored\nlead table
+
+legend right
+  <b>Job Steps</b>
+  ① Ingest → raw_leads
+  ② Feature engineering → feature store
+  ③ Train + register model
+  ④ Batch scoring + DB update
+  ⑤ Monitoring & drift metrics
+  ⑥ Dashboards & reporting
+endlegend
+
+@enduml

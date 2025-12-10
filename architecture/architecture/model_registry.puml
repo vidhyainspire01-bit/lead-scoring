@@ -1,0 +1,69 @@
+@startuml
+title RAKEZ Lead Scoring - Model Registry & Promotion (MLflow)
+
+skinparam shadowing false
+skinparam backgroundColor #F7F9FC
+skinparam defaultTextAlignment center
+
+skinparam rectangleStyle rounded
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #4E8EF7
+}
+skinparam database {
+  BackgroundColor #FFFFFF
+  BorderColor #00B5AD
+}
+skinparam node {
+  BackgroundColor #FFFFFF
+  BorderColor #4E8EF7
+}
+skinparam ArrowColor #00B5AD
+skinparam ArrowThickness 1.3
+skinparam ArrowFontSize 11
+
+actor DataScientist as DS
+actor MLOpsEngineer as MLOPS
+actor BusinessOwner as BO
+
+rectangle "Databricks Workspace" {
+  node "Step 1 - Training Job\n(Dev / Staging)" as TRAIN
+  node "Step 4 - Batch Evaluation\nand A/B Analysis" as EVAL
+}
+
+database "Step 2 - MLflow Tracking\n(Experiments)" as TRK
+database "Step 3 - MLflow Registry\n(rakez_lead_scoring)" as REG
+node "Step 5 - Model Serving Endpoint\n(Production)" as EP
+node "Client Apps\n(FastAPI API, CRM, Web UI)" as CLIENTS
+
+' -------- TRAINING & REGISTRATION --------
+DS --> TRAIN   : Step 1 - Configure run\n(params, dataset, features)
+TRAIN --> TRK  : Step 2 - Log metrics,\nparameters, artifacts
+TRAIN --> REG  : Step 3 - Register model\n(version N)
+
+' -------- STAGING EVALUATION ------------
+MLOPS --> REG : Step 4 - Set stage STAGING\nfor version N
+REG --> EP    : Step 5 - Deploy as\nstaging endpoint
+EP --> EVAL   : Step 6 - Score batch or\nshadow traffic
+EVAL --> TRK  : Step 7 - Log evaluation\nmetrics (AUC, Precision@K)
+EVAL --> BO   : Step 8 - Business KPI report\n(ROI, conversion uplift)
+
+' -------- PROMOTION TO PRODUCTION -------
+BO --> MLOPS  : Step 9 - Approve version N
+MLOPS --> REG : Step 10 - Transition stage\nversion N to PRODUCTION
+REG --> EP    : Step 11 - Update\nproduction endpoint
+EP --> CLIENTS : Step 12 - Live scoring\nfor apps and CRM
+
+' -------- CONTROLLED ROLLBACK ----------
+MLOPS --> REG : Step 13 - Promote previous\nstable version if needed
+REG --> EP    : Step 14 - Redeploy\nstable model to Prod
+
+legend right
+  == Flow Summary ==
+  Steps 1–3  : Train and register model versions
+  Steps 4–8  : Staging evaluation and business sign-off
+  Steps 9–12 : Promotion and live serving
+  Steps 13–14: Safe rollback to last good version
+endlegend
+
+@enduml
