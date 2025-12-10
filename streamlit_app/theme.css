@@ -1,0 +1,29 @@
+:root {
+    --primary-color: #4E8EF7;
+    --secondary-color: #F8F9FE;
+    --text-color: #2A2A2A;
+    --card-bg: #FFFFFF;
+    --border-color: #E6E6E6;
+    --success: #2ECC71;
+    --warning: #F1C40F;
+    --danger: #E74C3C;
+}
+
+html, body, [class*="css"] {
+    font-family: "Inter", sans-serif;
+}
+
+.card {
+    padding: 1.2rem;
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0px 2px 10px rgba(0,0,0,0.03);
+    margin-bottom: 1rem;
+}
+.header {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 1rem;
+}
